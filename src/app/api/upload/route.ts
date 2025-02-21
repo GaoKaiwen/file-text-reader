@@ -86,42 +86,32 @@ export async function POST(req: NextRequest) {
   try {
     console.log('✅ POST request hit /api/upload');
 
-    // Ensure req.body is not null
     if (!req.body) {
       console.error('❌ Request body is null');
       return NextResponse.json({ error: 'Request body is null' }, { status: 400 });
     }
 
-    // Convert ReadableStream to AsyncIterable
     const asyncIterable = readableStreamToAsyncIterable(req.body);
-
-    // Collect raw request body
     const chunks: Uint8Array[] = [];
     for await (const chunk of asyncIterable) {
       chunks.push(chunk);
     }
     const buffer = Buffer.concat(chunks);
 
-    // Create the upload directory
-    const uploadDir = './public/uploads';
+    // ✅ Change upload directory to /tmp (for Vercel)
+    const uploadDir = '/tmp/uploads';
     await fs.mkdir(uploadDir, { recursive: true });
 
-    // Initialize formidable
     const form = formidable({
       uploadDir,
       keepExtensions: true,
       multiples: false,
     });
 
-    // Create a mock Node.js IncomingMessage
     const stream = bufferToStream(buffer) as IncomingMessage;
     stream.headers = Object.fromEntries(req.headers);
 
-    // Parse the uploaded file
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_fields, files] = await form.parse(stream);
-
-    // Extract file path and type
     const uploadedFile = files.files?.[0];
 
     if (!uploadedFile || !uploadedFile.newFilename || !uploadedFile.mimetype) {
@@ -129,13 +119,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid file upload' }, { status: 400 });
     }
 
-    // Construct the correct file path manually
+    // ✅ Construct file path inside /tmp
     const filePath = path.join(uploadDir, uploadedFile.newFilename);
-
     console.log('📁 Corrected file path:', filePath);
     console.log('📝 File MIME type:', uploadedFile.mimetype);
 
-    // Call the parsing function
     const fileContent = await parseFile(filePath, uploadedFile.mimetype);
 
     console.log('✅ File parsed successfully!');
