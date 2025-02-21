@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
     const stream = bufferToStream(buffer) as IncomingMessage;
     stream.headers = Object.fromEntries(req.headers);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_fields, files] = await form.parse(stream);
 
     const uploadedFiles = Array.isArray(files.files) ? files.files : [files.files]; // Ensure an array
