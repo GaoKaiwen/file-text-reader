@@ -21,6 +21,20 @@ function bufferToStream(buffer: Buffer) {
   return readable;
 }
 
+// Helper to convert ReadableStream to AsyncIterable
+async function* readableStreamToAsyncIterable(stream: ReadableStream<Uint8Array>): AsyncIterable<Uint8Array> {
+  const reader = stream.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 // Helper to parse files based on type
 async function parseFile(filePath: string, mimeType: string) {
   try {
@@ -30,14 +44,14 @@ async function parseFile(filePath: string, mimeType: string) {
 
     if (mimeType === 'application/pdf') {
       console.log('🛠️ Importing pdf-parse...');
-      // @ts-ignore (Ignore TypeScript errors for this import)
+      // @ts-expect-error
       const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
-    
+
       console.log(`📖 Parsing PDF file at: ${filePath}`);
-    
+
       const dataBuffer = await fs.readFile(filePath);
       console.log(`✅ Successfully read file into buffer: ${filePath}`);
-    
+
       const pdfData = await pdfParse(dataBuffer);
       return pdfData.text;
     }
@@ -49,21 +63,6 @@ async function parseFile(filePath: string, mimeType: string) {
       return result.value;
     }
 
-    // if (mimeType === 'application/msword') {
-    //   const officeParser = await import('officeparser');
-    //   return new Promise<string>((resolve, reject) => {
-    //     officeParser.parseOffice(filePath, (err: any, data: any) => {
-    //       if (err) {
-    //         console.error('Error parsing .doc file:', err);
-    //         reject(err);
-    //       } else {
-    //         console.log('✅ Parsed .doc file successfully');
-    //         resolve(data ? data.toString() : '');  // Ensure data is a string
-    //       }
-    //     });
-    //   });
-    // }
-
     if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
       const xlsx = await import('xlsx');
       console.log('📝 Parsing Excel file:', filePath);
@@ -74,7 +73,7 @@ async function parseFile(filePath: string, mimeType: string) {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       return xlsx.utils.sheet_to_csv(sheet);
-    }    
+    }
 
     return 'Unsupported file type';
   } catch (error) {
@@ -87,9 +86,18 @@ export async function POST(req: NextRequest) {
   try {
     console.log('✅ POST request hit /api/upload');
 
+    // Ensure req.body is not null
+    if (!req.body) {
+      console.error('❌ Request body is null');
+      return NextResponse.json({ error: 'Request body is null' }, { status: 400 });
+    }
+
+    // Convert ReadableStream to AsyncIterable
+    const asyncIterable = readableStreamToAsyncIterable(req.body);
+
     // Collect raw request body
     const chunks: Uint8Array[] = [];
-    for await (const chunk of req.body as any) {
+    for await (const chunk of asyncIterable) {
       chunks.push(chunk);
     }
     const buffer = Buffer.concat(chunks);
@@ -119,13 +127,13 @@ export async function POST(req: NextRequest) {
       console.error('❌ File upload failed: Missing file data');
       return NextResponse.json({ error: 'Invalid file upload' }, { status: 400 });
     }
-    
+
     // Construct the correct file path manually
     const filePath = path.join(uploadDir, uploadedFile.newFilename);
-    
+
     console.log('📁 Corrected file path:', filePath);
     console.log('📝 File MIME type:', uploadedFile.mimetype);
-    
+
     // Call the parsing function
     const fileContent = await parseFile(filePath, uploadedFile.mimetype);
 
@@ -135,11 +143,9 @@ export async function POST(req: NextRequest) {
       message: 'File uploaded and parsed successfully',
       fileContent,
     });
-  } catch (error: any) {
-    console.error('❌ Error during file upload and parsing:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    console.error('❌ Error during file upload and parsing:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
