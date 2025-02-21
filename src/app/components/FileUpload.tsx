@@ -2,12 +2,13 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { CloudUpload, XCircle } from 'lucide-react'; // Icons
+import { CloudUpload, XCircle } from 'lucide-react';
 
 const FileUpload: React.FC = () => {
   const [fileContents, setFileContents] = useState<string[]>([]);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
 
+  // Handles file upload and sends them to the API
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const formData = new FormData();
     acceptedFiles.forEach((file) => formData.append('files', file));
@@ -40,6 +41,7 @@ const FileUpload: React.FC = () => {
     },
   });
 
+  // Highlights matching keywords in the displayed text
   const highlightKeywords = (text: string, keyword: string) => {
     if (!keyword.trim()) return text;
 
@@ -53,24 +55,22 @@ const FileUpload: React.FC = () => {
     );
   };
 
+  // Clears uploaded file contents
   const clearDocuments = () => {
     setFileContents([]);
   };
 
   return (
     <div className="max-w-3xl mx-auto p-8">
-      <h1 className="text-3xl font-semibold text-center mb-2">📂 File Upload and Parsing</h1>
-      <p className="text-gray-500 text-center mb-6">
-        Upload your document files and extract their content. Supported formats:
-      </p>
+      <h1 className="text-3xl font-semibold text-center mb-2">File Upload and Parsing</h1>
+      <p className="text-gray-500 text-center mb-6">Upload your document files and extract their content.</p>
 
       <div className="flex justify-center gap-3 mb-6 text-gray-600">
-        <span>📄 PDF</span>
-        <span>📝 Word</span>
-        <span>📊 Excel</span>
+        <span>PDF</span>
+        <span>Word</span>
+        <span>Excel</span>
       </div>
 
-      {/* Drag & Drop Box */}
       <div
         {...getRootProps()}
         className="border-2 border-dashed p-8 rounded-lg flex flex-col items-center justify-center 
@@ -83,7 +83,6 @@ const FileUpload: React.FC = () => {
         </p>
       </div>
 
-      {/* Clear All Button */}
       {fileContents.length > 0 && (
         <button
           onClick={clearDocuments}
@@ -94,10 +93,9 @@ const FileUpload: React.FC = () => {
         </button>
       )}
 
-      {/* Display File Contents */}
       {fileContents.map((content, index) => (
         <div key={index} className="mt-4 p-4 border rounded bg-white shadow-md">
-          <h3 className="text-xl font-bold">📃 File {index + 1} Content:</h3>
+          <h3 className="text-xl font-bold">File {index + 1} Content:</h3>
           <input
             type="text"
             placeholder="Search keywords (comma-separated)..."
@@ -108,11 +106,6 @@ const FileUpload: React.FC = () => {
           <pre className="whitespace-pre-wrap text-gray-700">{highlightKeywords(content, searchKeyword)}</pre>
         </div>
       ))}
-
-      {/* Footer */}
-      <footer className="text-center text-gray-400 mt-8 text-sm">
-        © 2025 Kaiwen
-      </footer>
     </div>
   );
 };
