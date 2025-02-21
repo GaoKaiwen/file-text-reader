@@ -98,7 +98,6 @@ export async function POST(req: NextRequest) {
     }
     const buffer = Buffer.concat(chunks);
 
-    // ✅ Change upload directory to /tmp (for Vercel)
     const uploadDir = '/tmp/uploads';
     await fs.mkdir(uploadDir, { recursive: true });
 
@@ -111,6 +110,7 @@ export async function POST(req: NextRequest) {
     const stream = bufferToStream(buffer) as IncomingMessage;
     stream.headers = Object.fromEntries(req.headers);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_fields, files] = await form.parse(stream);
     const uploadedFile = files.files?.[0];
 
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid file upload' }, { status: 400 });
     }
 
-    // ✅ Construct file path inside /tmp
+    // Construct file path inside /tmp
     const filePath = path.join(uploadDir, uploadedFile.newFilename);
     console.log('📁 Corrected file path:', filePath);
     console.log('📝 File MIME type:', uploadedFile.mimetype);
