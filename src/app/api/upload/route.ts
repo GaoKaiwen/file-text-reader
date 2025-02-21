@@ -44,7 +44,7 @@ async function parseFile(filePath: string, mimeType: string) {
 
     if (mimeType === 'application/pdf') {
       console.log('🛠️ Importing pdf-parse...');
-      // @ts-expect-error
+      // @ts-expect-error - pdf-parse has no TypeScript types
       const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
 
       console.log(`📖 Parsing PDF file at: ${filePath}`);
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     stream.headers = Object.fromEntries(req.headers);
 
     // Parse the uploaded file
-    const [fields, files] = await form.parse(stream);
+    const [_fields, files] = await form.parse(stream);
 
     // Extract file path and type
     const uploadedFile = files.files?.[0];
