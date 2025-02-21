@@ -114,12 +114,14 @@ export async function POST(req: NextRequest) {
         const fileContent = await parseFile(filePath, uploadedFile.mimetype);
         fileContents.push(fileContent);
       } catch (error) {
+        console.error('Error parsing file:', error);
         return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
       }
     }
 
     return NextResponse.json({ message: 'Files uploaded and parsed successfully', fileContents });
   } catch (error) {
+    console.error('Error uploading files:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

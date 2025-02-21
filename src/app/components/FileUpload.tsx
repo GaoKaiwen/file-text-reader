@@ -28,6 +28,7 @@ const FileUpload: React.FC = () => {
       }
     } catch (error) {
       setErrorMessage('Error uploading files');
+      console.error('Error uploading files:', error);
     }
   }, []);
 
