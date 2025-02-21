@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
     stream.headers = Object.fromEntries(req.headers);
 
     // Parse the uploaded file
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_fields, files] = await form.parse(stream);
 
     // Extract file path and type
