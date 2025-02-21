@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
     console.log('✅ POST request hit /api/upload');
 
     if (!req.body) {
-      console.error('❌ Request body is null');
       return NextResponse.json({ error: 'Request body is null' }, { status: 400 });
     }
 
@@ -104,33 +103,33 @@ export async function POST(req: NextRequest) {
     const form = formidable({
       uploadDir,
       keepExtensions: true,
-      multiples: false,
+      multiples: true, // ✅ Allow multiple file uploads
     });
 
     const stream = bufferToStream(buffer) as IncomingMessage;
     stream.headers = Object.fromEntries(req.headers);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_fields, files] = await form.parse(stream);
-    const uploadedFile = files.files?.[0];
 
-    if (!uploadedFile || !uploadedFile.newFilename || !uploadedFile.mimetype) {
-      console.error('❌ File upload failed: Missing file data');
-      return NextResponse.json({ error: 'Invalid file upload' }, { status: 400 });
+    const uploadedFiles = Array.isArray(files.files) ? files.files : [files.files]; // Ensure an array
+    const fileContents: string[] = [];
+
+    for (const uploadedFile of uploadedFiles) {
+      if (!uploadedFile?.newFilename || !uploadedFile?.mimetype) {
+        console.error('❌ File upload failed: Missing file data');
+        return NextResponse.json({ error: 'Invalid file upload' }, { status: 400 });
+      }
+
+      const filePath = path.join(uploadDir, uploadedFile.newFilename);
+      console.log('📁 Corrected file path:', filePath);
+
+      const fileContent = await parseFile(filePath, uploadedFile.mimetype);
+      fileContents.push(fileContent);
     }
 
-    // Construct file path inside /tmp
-    const filePath = path.join(uploadDir, uploadedFile.newFilename);
-    console.log('📁 Corrected file path:', filePath);
-    console.log('📝 File MIME type:', uploadedFile.mimetype);
-
-    const fileContent = await parseFile(filePath, uploadedFile.mimetype);
-
-    console.log('✅ File parsed successfully!');
-
     return NextResponse.json({
-      message: 'File uploaded and parsed successfully',
-      fileContent,
+      message: 'Files uploaded and parsed successfully',
+      fileContents, // ✅ Return an array of parsed contents
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
