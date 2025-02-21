@@ -38,7 +38,7 @@ async function* readableStreamToAsyncIterable(stream: ReadableStream<Uint8Array>
 // Parse file content based on MIME type
 async function parseFile(filePath: string, mimeType: string) {
   try {
-    await fs.access(filePath); // Ensure file exists
+    await fs.access(filePath); // Ensure file exists before reading
 
     if (mimeType === 'application/pdf') {
       // @ts-expect-error - pdf-parse has no TypeScript types
@@ -64,12 +64,14 @@ async function parseFile(filePath: string, mimeType: string) {
       return xlsx.utils.sheet_to_csv(sheet);
     }
 
-    return 'Unsupported file type';
+    throw new Error('Unsupported file type');
+
   } catch (error) {
     console.error('Error parsing file:', error);
     throw new Error('Failed to parse file');
   }
 }
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,7 +79,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Request body is null' }, { status: 400 });
     }
 
-    // Convert ReadableStream to Buffer
     const asyncIterable = readableStreamToAsyncIterable(req.body);
     const chunks: Uint8Array[] = [];
     for await (const chunk of asyncIterable) {
@@ -88,11 +89,10 @@ export async function POST(req: NextRequest) {
     const uploadDir = '/tmp/uploads';
     await fs.mkdir(uploadDir, { recursive: true });
 
-    // Parse the uploaded files
     const form = formidable({
       uploadDir,
       keepExtensions: true,
-      multiples: true, // Allow multiple file uploads
+      multiples: true,
     });
 
     const stream = bufferToStream(buffer) as IncomingMessage;
@@ -109,17 +109,17 @@ export async function POST(req: NextRequest) {
       }
 
       const filePath = path.join(uploadDir, uploadedFile.newFilename);
-      const fileContent = await parseFile(filePath, uploadedFile.mimetype);
-      fileContents.push(fileContent);
+
+      try {
+        const fileContent = await parseFile(filePath, uploadedFile.mimetype);
+        fileContents.push(fileContent);
+      } catch (error) {
+        return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
+      }
     }
 
-    return NextResponse.json({
-      message: 'Files uploaded and parsed successfully',
-      fileContents,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('Error during file upload and parsing:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ message: 'Files uploaded and parsed successfully', fileContents });
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

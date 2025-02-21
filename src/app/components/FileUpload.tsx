@@ -7,26 +7,27 @@ import { CloudUpload, XCircle } from 'lucide-react';
 const FileUpload: React.FC = () => {
   const [fileContents, setFileContents] = useState<string[]>([]);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Handles file upload and sends them to the API
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const formData = new FormData();
     acceptedFiles.forEach((file) => formData.append('files', file));
-
+  
     try {
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
-
+  
       const data = await response.json();
       if (response.ok) {
         setFileContents((prev) => [...prev, ...data.fileContents]);
       } else {
-        console.error('Upload failed:', data.error);
+        setErrorMessage(data.error || 'Upload failed');
       }
     } catch (error) {
-      console.error('Error uploading files:', error);
+      setErrorMessage('Error uploading files');
     }
   }, []);
 
@@ -62,6 +63,18 @@ const FileUpload: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto p-8">
+      {errorMessage && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Error:</strong> <span className="block sm:inline">{errorMessage}</span>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <XCircle className="w-5 h-5 text-red-500" />
+          </button>
+        </div>
+      )}
+
       <h1 className="text-3xl font-semibold text-center mb-2">File Upload and Parsing</h1>
       <p className="text-gray-500 text-center mb-6">Upload your document files and extract their content.</p>
 
