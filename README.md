@@ -31,7 +31,7 @@ This is a Next.js application that allows users to upload files (PDF, Word, Exce
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/file-text-reader.git
+   git clone https://github.com/GaoKaiwen/file-text-reader.git
    cd file-text-reader
 2. Install dependencies:
    ```bash
